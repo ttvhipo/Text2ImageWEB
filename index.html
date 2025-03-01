@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Image Generator</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.js"></script>
     <style>
         :root {
             --primary: #4f46e5;
@@ -334,6 +335,95 @@
             background-color: var(--danger);
         }
         
+        /* Chat section styles */
+        .chat-section {
+            margin-top: 40px;
+            border-top: 1px solid var(--gray);
+            padding-top: 30px;
+        }
+        
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .chat-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+        
+        .chat-messages {
+            height: 300px;
+            border: 2px solid var(--gray);
+            border-radius: 8px;
+            padding: 15px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            background-color: var(--light);
+        }
+        
+        .message {
+            margin-bottom: 10px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            max-width: 80%;
+            word-break: break-word;
+        }
+        
+        .message-container {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        
+        .message-bubble {
+            background-color: #e2e8f0;
+            padding: 10px 15px;
+            border-radius: 18px;
+            max-width: 80%;
+            word-break: break-word;
+        }
+        
+        .message-info {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-bottom: 2px;
+        }
+        
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input {
+            flex-grow: 1;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--gray);
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #6b7280;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+        
         /* Responsive */
         @media (max-width: 768px) {
             .container {
@@ -347,6 +437,10 @@
             .btn-group {
                 flex-direction: column;
             }
+            
+            .chat-input-container {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -358,84 +452,118 @@
             <p class="tagline">Transform your ideas into stunning visuals with AI</p>
         </header>
         
-        <div class="input-group">
-            <input type="text" id="prompt" placeholder="Describe the image you want to create..." />
-            <button id="generateBtn" onclick="generateImage()">
-                <i class="fas fa-magic"></i> Generate
-            </button>
+        <div class="tabs">
+            <div class="tab active" id="generatorTab" onclick="switchTab('generator')">
+                <i class="fas fa-image"></i> Generator
+            </div>
+            <div class="tab" id="chatTab" onclick="switchTab('chat')">
+                <i class="fas fa-comments"></i> Global Chat
+            </div>
         </div>
         
-        <div id="advancedOptions" style="display: none;">
-            <div class="options-panel">
-                <div class="option-group">
-                    <label for="style">Art Style</label>
-                    <select id="style">
-                        <option value="realistic">Realistic</option>
-                        <option value="anime">Anime</option>
-                        <option value="digital">Digital Art</option>
-                        <option value="oil">Oil Painting</option>
-                        <option value="watercolor">Watercolor</option>
-                        <option value="sketch">Sketch</option>
-                    </select>
-                </div>
-                
-                <div class="option-group">
-                    <label for="aspect">Aspect Ratio</label>
-                    <select id="aspect">
-                        <option value="1:1">Square (1:1)</option>
-                        <option value="4:3">Standard (4:3)</option>
-                        <option value="16:9">Widescreen (16:9)</option>
-                        <option value="9:16">Portrait (9:16)</option>
-                    </select>
-                </div>
-                
-                <div class="option-group">
-                    <label>High Quality</label>
-                    <div class="toggle-container">
-                        <label class="switch">
-                            <input type="checkbox" id="highQuality">
-                            <span class="slider"></span>
-                        </label>
-                        <span id="qualityLabel">Standard</span>
+        <div id="generatorSection">
+            <div class="input-group">
+                <input type="text" id="prompt" placeholder="Describe the image you want to create..." />
+                <button id="generateBtn" onclick="generateImage()">
+                    <i class="fas fa-magic"></i> Generate
+                </button>
+            </div>
+            
+            <div id="advancedOptions" style="display: none;">
+                <div class="options-panel">
+                    <div class="option-group">
+                        <label for="style">Art Style</label>
+                        <select id="style">
+                            <option value="realistic">Realistic</option>
+                            <option value="anime">Anime</option>
+                            <option value="digital">Digital Art</option>
+                            <option value="oil">Oil Painting</option>
+                            <option value="watercolor">Watercolor</option>
+                            <option value="sketch">Sketch</option>
+                        </select>
+                    </div>
+                    
+                    <div class="option-group">
+                        <label for="aspect">Aspect Ratio</label>
+                        <select id="aspect">
+                            <option value="1:1">Square (1:1)</option>
+                            <option value="4:3">Standard (4:3)</option>
+                            <option value="16:9">Widescreen (16:9)</option>
+                            <option value="9:16">Portrait (9:16)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="option-group">
+                        <label>High Quality</label>
+                        <div class="toggle-container">
+                            <label class="switch">
+                                <input type="checkbox" id="highQuality">
+                                <span class="slider"></span>
+                            </label>
+                            <span id="qualityLabel">Standard</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <div class="btn-group">
-            <button class="btn-secondary" id="toggleOptions">
-                <i class="fas fa-sliders-h"></i> Advanced Options
-            </button>
-            <button class="btn-secondary" onclick="clearHistory()">
-                <i class="fas fa-trash"></i> Clear History
-            </button>
-        </div>
-        
-        <div class="loader-container" id="loadingContainer">
-            <div class="loader"></div>
-            <p>Creating your masterpiece...</p>
-        </div>
-        
-        <div class="image-container">
-            <img id="outputImage" style="display: none;" alt="Generated Image" />
             
-            <div class="actions" id="imageActions" style="display: none;">
-                <button onclick="downloadImage()">
-                    <i class="fas fa-download"></i> Download
+            <div class="btn-group">
+                <button class="btn-secondary" id="toggleOptions">
+                    <i class="fas fa-sliders-h"></i> Advanced Options
                 </button>
-                <button onclick="shareImage()" class="tooltip">
-                    <i class="fas fa-share-alt"></i> Share
-                    <span class="tooltiptext">Copy a link to this image</span>
+                <button class="btn-secondary" onclick="clearHistory()">
+                    <i class="fas fa-trash"></i> Clear History
                 </button>
-                <button onclick="regenerateImage()">
-                    <i class="fas fa-redo"></i> Regenerate
-                </button>
+            </div>
+            
+            <div class="loader-container" id="loadingContainer">
+                <div class="loader"></div>
+                <p>Creating your masterpiece...</p>
+            </div>
+            
+            <div class="image-container">
+                <img id="outputImage" style="display: none;" alt="Generated Image" />
+                
+                <div class="actions" id="imageActions" style="display: none;">
+                    <button onclick="downloadImage()">
+                        <i class="fas fa-download"></i> Download
+                    </button>
+                    <button onclick="shareImage()" class="tooltip">
+                        <i class="fas fa-share-alt"></i> Share
+                        <span class="tooltiptext">Copy a link to this image</span>
+                    </button>
+                    <button onclick="regenerateImage()">
+                        <i class="fas fa-redo"></i> Regenerate
+                    </button>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 40px; text-align: left;">Previously Generated Images</h3>
+            <div class="history" id="imageHistory">
+                <!-- History items will be inserted here -->
             </div>
         </div>
         
-        <h3 style="margin-top: 40px; text-align: left;">Previously Generated Images</h3>
-        <div class="history" id="imageHistory">
-            <!-- History items will be inserted here -->
+        <div id="chatSection" style="display: none;" class="chat-section">
+            <div class="chat-header">
+                <h2 class="chat-title"><i class="fas fa-comments"></i> Global Chat</h2>
+            </div>
+            
+            <div class="chat-messages" id="messages">
+                <!-- Messages will appear here -->
+                <div class="message-container">
+                    <div class="message-bubble">
+                        <div class="message-info">System</div>
+                        Welcome to the global chat! Messages are anonymous. Be kind and have fun!
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chat-input-container">
+                <input type="text" id="chatMessage" class="chat-input" placeholder="Type a message..." onkeypress="if(event.key === 'Enter') sendMessage()" />
+                <button onclick="sendMessage()">
+                    <i class="fas fa-paper-plane"></i> Send
+                </button>
+            </div>
         </div>
     </div>
     
@@ -448,12 +576,16 @@
         // Global variables to store state
         let generationHistory = JSON.parse(localStorage.getItem('imageHistory')) || [];
         let currentImageUrl = null;
+        const socket = io("https://text2image-production-e883.up.railway.app");
         
         // Initialize the page
         window.onload = function() {
             // Set up event listeners
             document.getElementById('toggleOptions').addEventListener('click', toggleAdvancedOptions);
             document.getElementById('highQuality').addEventListener('change', updateQualityLabel);
+            
+            // Set up socket listeners
+            setupChatListeners();
             
             // Load history
             renderHistory();
@@ -465,6 +597,57 @@
                 }
             });
         };
+        
+        function setupChatListeners() {
+            socket.on("receive_message", (data) => {
+                addMessageToChat(data.username || "Anonymous", data.message);
+            });
+        }
+        
+        function addMessageToChat(username, message) {
+            const messagesDiv = document.getElementById("messages");
+            const messageContainer = document.createElement("div");
+            messageContainer.className = "message-container";
+            
+            messageContainer.innerHTML = `
+                <div class="message-bubble">
+                    <div class="message-info">${username}</div>
+                    ${message}
+                </div>
+            `;
+            
+            messagesDiv.appendChild(messageContainer);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; // Auto-scroll
+        }
+        
+        function sendMessage() {
+            const messageInput = document.getElementById("chatMessage");
+            const message = messageInput.value.trim();
+            
+            if (message === "") return;
+            
+            socket.emit("send_message", { username: "Anonymous", message });
+            messageInput.value = "";
+        }
+        
+        function switchTab(tab) {
+            const generatorTab = document.getElementById('generatorTab');
+            const chatTab = document.getElementById('chatTab');
+            const generatorSection = document.getElementById('generatorSection');
+            const chatSection = document.getElementById('chatSection');
+            
+            if (tab === 'generator') {
+                generatorTab.classList.add('active');
+                chatTab.classList.remove('active');
+                generatorSection.style.display = 'block';
+                chatSection.style.display = 'none';
+            } else {
+                generatorTab.classList.remove('active');
+                chatTab.classList.add('active');
+                generatorSection.style.display = 'none';
+                chatSection.style.display = 'block';
+            }
+        }
         
         async function generateImage() {
             const prompt = document.getElementById("prompt").value;

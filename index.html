@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Generator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --dark: #1f2937;
+            --light: #f9fafb;
+            --gray: #e5e7eb;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+            color: var(--dark);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 30px;
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .tagline {
+            color: #6b7280;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        input, select {
+            flex-grow: 1;
+            padding: 12px 16px;
+            border: 2px solid var(--gray);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+        
+        .options-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            background-color: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .option-group label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #4b5563;
+        }
+        
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+        
+        button:active {
+            transform: translateY(2px);
+        }
+        
+        .btn-secondary {
+            background-color: white;
+            color: var(--dark);
+            border: 2px solid var(--gray);
+        }
+        
+        .btn-secondary:hover {
+            background-color: var(--gray);
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .image-container {
+            margin-top: 30px;
+            position: relative;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        #outputImage {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
+        }
+        
+        .history {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .history-item {
+            cursor: pointer;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+        
+        .history-item:hover {
+            transform: scale(1.05);
+        }
+        
+        .history-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+        }
+        
+        .history-label {
+            padding: 8px;
+            font-size: 0.8rem;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background-color: white;
+        }
+        
+        /* Loading animation */
+        .loader-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            margin: 30px 0;
+        }
+        
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--gray);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .actions button {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+        
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: white;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
+        
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        /* Toggle switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--success);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: transform 0.3s, opacity 0.3s;
+        }
+        
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .toast.error {
+            background-color: var(--danger);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .input-group {
+                flex-direction: column;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <p class="md:hidden text-center text-gray-500 dark:text-gray-400 text-sm mb-6">Created by <span class="font-medium">aachee16</span></p>
+            <h1><i class="fas fa-brain"></i> AI Image Generator</h1>
+            <p class="tagline">Transform your ideas into stunning visuals with AI</p>
+        </header>
+        
+        <div class="input-group">
+            <input type="text" id="prompt" placeholder="Describe the image you want to create..." />
+            <button id="generateBtn" onclick="generateImage()">
+                <i class="fas fa-magic"></i> Generate
+            </button>
+        </div>
+        
+        <div id="advancedOptions" style="display: none;">
+            <div class="options-panel">
+                <div class="option-group">
+                    <label for="style">Art Style</label>
+                    <select id="style">
+                        <option value="realistic">Realistic</option>
+                        <option value="anime">Anime</option>
+                        <option value="digital">Digital Art</option>
+                        <option value="oil">Oil Painting</option>
+                        <option value="watercolor">Watercolor</option>
+                        <option value="sketch">Sketch</option>
+                    </select>
+                </div>
+                
+                <div class="option-group">
+                    <label for="aspect">Aspect Ratio</label>
+                    <select id="aspect">
+                        <option value="1:1">Square (1:1)</option>
+                        <option value="4:3">Standard (4:3)</option>
+                        <option value="16:9">Widescreen (16:9)</option>
+                        <option value="9:16">Portrait (9:16)</option>
+                    </select>
+                </div>
+                
+                <div class="option-group">
+                    <label>High Quality</label>
+                    <div class="toggle-container">
+                        <label class="switch">
+                            <input type="checkbox" id="highQuality">
+                            <span class="slider"></span>
+                        </label>
+                        <span id="qualityLabel">Standard</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="btn-group">
+            <button class="btn-secondary" id="toggleOptions">
+                <i class="fas fa-sliders-h"></i> Advanced Options
+            </button>
+            <button class="btn-secondary" onclick="clearHistory()">
+                <i class="fas fa-trash"></i> Clear History
+            </button>
+        </div>
+        
+        <div class="loader-container" id="loadingContainer">
+            <div class="loader"></div>
+            <p>Creating your masterpiece...</p>
+        </div>
+        
+        <div class="image-container">
+            <img id="outputImage" style="display: none;" alt="Generated Image" />
+            
+            <div class="actions" id="imageActions" style="display: none;">
+                <button onclick="downloadImage()">
+                    <i class="fas fa-download"></i> Download
+                </button>
+                <button onclick="shareImage()" class="tooltip">
+                    <i class="fas fa-share-alt"></i> Share
+                    <span class="tooltiptext">Copy a link to this image</span>
+                </button>
+                <button onclick="regenerateImage()">
+                    <i class="fas fa-redo"></i> Regenerate
+                </button>
+            </div>
+        </div>
+        
+        <h3 style="margin-top: 40px; text-align: left;">Previously Generated Images</h3>
+        <div class="history" id="imageHistory">
+            <!-- History items will be inserted here -->
+        </div>
+    </div>
+    
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage">Image generated successfully!</span>
+    </div>
+    
+    <script>
+        // Global variables to store state
+        let generationHistory = JSON.parse(localStorage.getItem('imageHistory')) || [];
+        let currentImageUrl = null;
+        
+        // Initialize the page
+        window.onload = function() {
+            // Set up event listeners
+            document.getElementById('toggleOptions').addEventListener('click', toggleAdvancedOptions);
+            document.getElementById('highQuality').addEventListener('change', updateQualityLabel);
+            
+            // Load history
+            renderHistory();
+            
+            // Enable enter key for generation
+            document.getElementById('prompt').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    generateImage();
+                }
+            });
+        };
+        
+        async function generateImage() {
+            const prompt = document.getElementById("prompt").value;
+            const outputImage = document.getElementById("outputImage");
+            const loadingContainer = document.getElementById("loadingContainer");
+            const imageActions = document.getElementById("imageActions");
+            
+            if (!prompt) {
+                showToast("Please enter a prompt.", true);
+                return;
+            }
+            
+            // Get advanced options
+            const style = document.getElementById("style").value;
+            const aspect = document.getElementById("aspect").value;
+            const highQuality = document.getElementById("highQuality").checked;
+            
+            // Hide image and show loading
+            outputImage.style.display = "none";
+            imageActions.style.display = "none";
+            loadingContainer.style.display = "flex";
+            
+            try {
+                // Add a slight delay to simulate processing for demo purposes
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // Create the full prompt including style
+                const fullPrompt = style !== 'realistic' ? 
+                    `${prompt}, ${style} style` : prompt;
+                
+                const response = await fetch("https://text2image-production-e883.up.railway.app/generate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ 
+                        prompt: fullPrompt,
+                        aspectRatio: aspect,
+                        highQuality: highQuality
+                    })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    currentImageUrl = URL.createObjectURL(blob);
+                    outputImage.src = currentImageUrl;
+                    outputImage.style.display = "block";
+                    imageActions.style.display = "flex";
+                    
+                    // Add to history
+                    const historyItem = {
+                        prompt,
+                        imageUrl: currentImageUrl,
+                        timestamp: new Date().toISOString()
+                    };
+                    generationHistory.unshift(historyItem);
+                    
+                    // Keep only the last 10 items
+                    if (generationHistory.length > 10) {
+                        generationHistory = generationHistory.slice(0, 10);
+                    }
+                    
+                    // Save to localStorage
+                    localStorage.setItem('imageHistory', JSON.stringify(generationHistory));
+                    
+                    // Update history display
+                    renderHistory();
+                    
+                    showToast("Image generated successfully!");
+                } else {
+                    const errorData = await response.json();
+                    showToast("Error generating image: " + errorData.error, true);
+                }
+            } catch (error) {
+                showToast("Something went wrong. Please try again.", true);
+                console.error(error);
+            } finally {
+                loadingContainer.style.display = "none";
+            }
+        }
+        
+        function toggleAdvancedOptions() {
+            const optionsPanel = document.getElementById('advancedOptions');
+            const toggleBtn = document.getElementById('toggleOptions');
+            
+            if (optionsPanel.style.display === 'none') {
+                optionsPanel.style.display = 'block';
+                toggleBtn.innerHTML = '<i class="fas fa-times"></i> Hide Options';
+            } else {
+                optionsPanel.style.display = 'none';
+                toggleBtn.innerHTML = '<i class="fas fa-sliders-h"></i> Advanced Options';
+            }
+        }
+        
+        function updateQualityLabel() {
+            const qualityLabel = document.getElementById('qualityLabel');
+            const highQuality = document.getElementById('highQuality').checked;
+            
+            qualityLabel.textContent = highQuality ? 'High Quality' : 'Standard';
+        }
+        
+        function downloadImage() {
+            if (!currentImageUrl) return;
+            
+            const a = document.createElement('a');
+            a.href = currentImageUrl;
+            a.download = 'ai-generated-image-' + Date.now() + '.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            showToast("Image downloaded!");
+        }
+        
+        function shareImage() {
+            if (!currentImageUrl) return;
+            
+            // In a real app, you would get a shareable link from your backend
+            // For this demo, we'll just copy the prompt to clipboard
+            const prompt = document.getElementById("prompt").value;
+            navigator.clipboard.writeText("Check out the image I created with AI: " + prompt);
+            
+            showToast("Link copied to clipboard!");
+        }
+        
+        function regenerateImage() {
+            generateImage();
+        }
+        
+        function clearHistory() {
+            generationHistory = [];
+            localStorage.removeItem('imageHistory');
+            renderHistory();
+            showToast("History cleared!");
+        }
+        
+        function renderHistory() {
+            const historyContainer = document.getElementById('imageHistory');
+            historyContainer.innerHTML = '';
+            
+            if (generationHistory.length === 0) {
+                historyContainer.innerHTML = '<p>No images generated yet.</p>';
+                return;
+            }
+            
+            generationHistory.forEach((item, index) => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                historyItem.innerHTML = `
+                    <img src="${item.imageUrl}" alt="Generated image" />
+                    <div class="history-label">${item.prompt.substring(0, 20)}${item.prompt.length > 20 ? '...' : ''}</div>
+                `;
+                
+                historyItem.addEventListener('click', () => {
+                    document.getElementById('prompt').value = item.prompt;
+                    document.getElementById('outputImage').src = item.imageUrl;
+                    document.getElementById('outputImage').style.display = 'block';
+                    document.getElementById('imageActions').style.display = 'flex';
+                    currentImageUrl = item.imageUrl;
+                });
+                
+                historyContainer.appendChild(historyItem);
+            });
+        }
+        
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = message;
+            toast.className = isError ? 'toast error show' : 'toast show';
+            
+            setTimeout(() => {
+                toast.className = toast.className.replace('show', '');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
